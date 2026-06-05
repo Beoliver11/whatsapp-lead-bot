@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard de Leads</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f4f6f9;
+      color: #333;
+    }
+
+    header {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 20px 32px;
+    }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    header p {
+      font-size: 13px;
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+
+    .counters {
+      display: flex;
+      gap: 16px;
+      padding: 24px 32px 0;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 18px 24px;
+      min-width: 160px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .card .label {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .card .value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-top: 4px;
+    }
+
+    .card.green .value { color: #2e7d32; }
+
+    .table-wrap {
+      margin: 24px 32px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    thead th {
+      background: #1e3a5f;
+      color: #fff;
+      text-align: left;
+      padding: 12px 16px;
+      font-weight: 500;
+      font-size: 13px;
+    }
+
+    tbody tr:nth-child(even) { background: #f9fafb; }
+
+    tbody td {
+      padding: 11px 16px;
+      border-bottom: 1px solid #eee;
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge.qualified { background: #e8f5e9; color: #2e7d32; }
+    .badge.unqualified { background: #f0f0f0; color: #777; }
+
+    .empty {
+      text-align: center;
+      padding: 48px;
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    .refresh-note {
+      text-align: right;
+      padding: 0 32px 16px;
+      font-size: 12px;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Dashboard de Leads</h1>
+  <p>Atualizado automaticamente a cada 30 segundos</p>
+</header>
+
+<div class="counters">
+  <div class="card">
+    <div class="label">Total de leads</div>
+    <div class="value" id="total">-</div>
+  </div>
+  <div class="card green">
+    <div class="label">Qualificados</div>
+    <div class="value" id="qualified">-</div>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>WhatsApp</th>
+        <th>Interesse</th>
+        <th>Patrimônio</th>
+        <th>Score</th>
+        <th>Objetivo</th>
+        <th>Status</th>
+        <th>Horário</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="refresh-note" id="last-update"></div>
+
+<script>
+  async function load() {
+    try {
+      const res = await fetch('/api/leads');
+      const leads = await res.json();
+
+      document.getElementById('total').textContent = leads.length;
+      document.getElementById('qualified').textContent = leads.filter(l => l.qualified).length;
+
+      const tbody = document.getElementById('tbody');
+
+      if (leads.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhum lead registrado ainda.</td></tr>';
+      } else {
+        tbody.innerHTML = leads.slice().reverse().map(l => `
+          <tr>
+            <td>${esc(l.nome)}</td>
+            <td>${esc(l.phone)}</td>
+            <td>${esc(l.interesse)}</td>
+            <td>${esc(l.patrimonio)}</td>
+            <td>${esc(l.score)}</td>
+            <td>${esc(l.objetivo)}</td>
+            <td>
+              <span class="badge ${l.qualified ? 'qualified' : 'unqualified'}">
+                ${l.qualified ? 'Qualificado' : 'Nao qualificado'}
+              </span>
+            </td>
+            <td>${esc(l.timestamp)}</td>
+          </tr>
+        `).join('');
+      }
+
+      document.getElementById('last-update').textContent =
+        'Ultima atualizacao: ' + new Date().toLocaleTimeString('pt-BR');
+    } catch (e) {
+      console.error('Erro ao carregar leads', e);
+    }
+  }
+
+  function esc(str) {
+    if (!str) return '-';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  load();
+  setInterval(load, 30000);
+</script>
+</body>
+</html>

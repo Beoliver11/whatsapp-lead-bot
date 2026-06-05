@@ -14,9 +14,8 @@ Lead entra → Nome → Interesse → Patrimônio / Score → Objetivo → Notif
 
 - Node.js 18+
 - Instância da [Evolution API](https://github.com/EvolutionAPI/evolution-api) rodando e conectada ao WhatsApp
-- Conta na OpenAI (chave de API)
 
-## Configuração
+## Configuração local
 
 1. Clone o repositório:
    ```bash
@@ -34,11 +33,16 @@ Lead entra → Nome → Interesse → Patrimônio / Score → Objetivo → Notif
    cp .env.example .env
    ```
 
+4. Rode o servidor:
+   ```bash
+   node server.js
+   ```
+
 ### Variáveis de ambiente
 
 | Variável | Descrição |
 |---|---|
-| `EVOLUTION_API_URL` | URL da sua instância da Evolution API (ex: `https://api.seudominio.com`) |
+| `EVOLUTION_API_URL` | URL da instância da Evolution API (ex: `https://api.seudominio.com`) |
 | `EVOLUTION_API_KEY` | Chave de autenticação da Evolution API |
 | `EVOLUTION_INSTANCE` | Nome da instância conectada ao WhatsApp |
 | `OPENAI_API_KEY` | Chave da OpenAI (reservada para expansões futuras) |
@@ -46,42 +50,43 @@ Lead entra → Nome → Interesse → Patrimônio / Score → Objetivo → Notif
 | `ASSESSOR_NAME` | Nome do assessor exibido nas mensagens (ex: `João Silva`) |
 | `PORT` | Porta do servidor (padrão: `3000`) |
 
-## Rodando localmente
+---
 
-```bash
-node server.js
-```
+## Deploy no EasyPanel (Docker)
 
-## Deploy na Vercel
+O projeto inclui um `Dockerfile` pronto para deploy.
 
-> **Atenção:** a Vercel é serverless — cada requisição inicia uma nova instância, então o estado em memória **não persiste** entre mensagens do mesmo lead. Para produção, substitua o objeto `conversations` por um banco de dados (Redis, Supabase, etc.).
->
-> Para testes rápidos ou MVP, use **Railway** ou **Render** (sempre ativo).
+### Passo a passo
 
-Para fazer o deploy na Vercel:
+1. No EasyPanel, crie um novo serviço do tipo **App**.
+2. Conecte ao repositório GitHub `Beoliver11/whatsapp-lead-bot`.
+3. O EasyPanel detecta o `Dockerfile` automaticamente.
+4. Em **Environment Variables**, adicione todas as variáveis listadas acima.
+5. Defina a porta exposta como `3000`.
+6. Faça o deploy.
 
-1. Instale a CLI da Vercel:
-   ```bash
-   npm i -g vercel
-   ```
+### Webhook
 
-2. Faça o deploy:
-   ```bash
-   vercel --prod
-   ```
+Após o deploy, configure o webhook na sua instância da Evolution API:
 
-3. Configure as variáveis de ambiente no painel da Vercel:
-   `Settings > Environment Variables`
+- **URL:** `https://seu-dominio.easypanel.host/webhook`
+- **Evento:** `messages.upsert`
 
-## Configurando o Webhook na Evolution API
+---
 
-Após o deploy, configure o webhook na sua instância da Evolution API para apontar para:
+## Dashboard de leads
+
+Acesse o dashboard em:
 
 ```
-POST https://seu-projeto.vercel.app/webhook
+https://seu-dominio.easypanel.host/dashboard
 ```
 
-Evento a ativar: `messages.upsert`
+Exibe todos os leads capturados com nome, WhatsApp, interesse, patrimônio, score, objetivo, status (qualificado / não qualificado) e horário. Atualiza automaticamente a cada 30 segundos.
+
+> Os dados ficam em memória — reiniciar o container limpa os leads. Para persistência, conecte um banco de dados.
+
+---
 
 ## Fluxo de qualificação
 
@@ -93,16 +98,18 @@ Evento a ativar: `messages.upsert`
 | SCORE | Score de crédito (para crédito/consórcio) |
 | OBJETIVO | Objetivo financeiro principal |
 
-**Lead qualificado:** patrimônio ≥ R$5k, OU score bom, OU qualquer interesse com objetivo definido.
+**Qualificado:** patrimônio >= R$5k, OU score bom, OU qualquer interesse com objetivo definido.
 
-**Lead não qualificado:** patrimônio < R$5k + score desconhecido + quer apenas organizar finanças.
+**Não qualificado:** patrimônio < R$5k + score desconhecido + quer apenas organizar finanças.
+
+---
 
 ## Notificação ao assessor
 
 Quando um lead é qualificado, o assessor recebe via WhatsApp:
 
 ```
-🔔 Novo lead qualificado
+Novo lead qualificado
 
 Nome: João Silva
 WhatsApp: 5511999999999

@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
+const path = require('path');
 
 const app = express();
 app.use(express.json());
@@ -16,6 +17,9 @@ const {
 
 // In-memory state: phone -> conversation state
 const conversations = {};
+
+// Leads capturados (persistidos em memória durante a execução)
+const leads = [];
 
 // Deduplication: messageId -> timestamp
 const recentMessages = {};
@@ -220,7 +224,20 @@ async function handleMessage(phone, text) {
       state.objetivo = input;
       state.stage = STAGES.ENCERRADO;
 
-      if (isQualified(state)) {
+      const qualified = isQualified(state);
+
+      leads.push({
+        nome: state.nome,
+        phone: state.phone,
+        interesse: INTERESSE_MAP[state.interesse] || state.interesse,
+        patrimonio: PATRIMONIO_MAP[state.patrimonio] || state.patrimonio,
+        score: SCORE_MAP[state.score] || state.score,
+        objetivo: OBJETIVO_MAP[state.objetivo] || state.objetivo,
+        qualified,
+        timestamp: new Date().toLocaleString('pt-BR'),
+      });
+
+      if (qualified) {
         await sendMessage(
           phone,
           `Perfeito, ${state.nome}! Com base no que você me contou, acredito que o ${ASSESSOR_NAME} pode te ajudar muito. ` +
@@ -242,6 +259,14 @@ async function handleMessage(phone, text) {
       break;
   }
 }
+
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
+app.get('/api/leads', (req, res) => {
+  res.json(leads);
+});
 
 app.post('/webhook', async (req, res) => {
   res.sendStatus(200); // responde imediatamente para a Evolution API
