@@ -2,6 +2,21 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
+const fs = require('fs');
+
+const LEADS_FILE = 'leads.json';
+
+function loadLeads() {
+  if (fs.existsSync(LEADS_FILE)) {
+    try { return JSON.parse(fs.readFileSync(LEADS_FILE, 'utf8')); }
+    catch { return []; }
+  }
+  return [];
+}
+
+function saveLeads() {
+  fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2));
+}
 
 const app = express();
 app.use(express.json());
@@ -18,8 +33,7 @@ const {
 // In-memory state: phone -> conversation state
 const conversations = {};
 
-// Leads capturados (persistidos em memória durante a execução)
-const leads = [];
+let leads = loadLeads();
 
 // Deduplication: messageId -> timestamp
 const recentMessages = {};
@@ -236,6 +250,7 @@ async function handleMessage(phone, text) {
         qualified,
         timestamp: new Date().toLocaleString('pt-BR'),
       });
+      saveLeads();
 
       if (qualified) {
         await sendMessage(
